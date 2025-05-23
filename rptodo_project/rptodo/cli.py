@@ -6,8 +6,14 @@ import csv
 from rptodo import ERRORS, __app_name__, __version__, config, database
 
 from rptodo.config import init_app
-
+from rptodo.database import get_database_path
+from rptodo.rptodo import add_task, remove_task
 app = typer.Typer()
+
+def get_db_path() -> Path:
+    config_path = config.CONFIG_FILE_PATH
+    return database.get_database_path(config_path)
+
 
 def _version_callback(value: bool) -> None:
     if value:
@@ -55,32 +61,26 @@ def init(
     
     typer.secho(f"The to-do database is {db_path}", fg=typer.colors.GREEN)
 
-def get_db_path() -> Path:
-    config_path = config.CONFIG_FILE_PATH
-    return database.get_database_path(config_path)
-
 
 @app.command()
 def add(task: str = typer.Argument(..., help="Task description")):
     """Add a new to-do task."""
     db_path = get_db_path()
-    result = database.add_todo(db_path, task)
-    if result != 0:  # SUCCESS is 0
-        typer.secho(f"Failed to add task: {ERRORS.get(result, 'Unknown error')}", fg=typer.colors.RED)
+    code, message = add_task(db_path, task)
+    if code != 0:
+        typer.secho(f"Failed to add task: {ERRORS.get(code, 'Unknown error')}", fg=typer.colors.RED)
         raise typer.Exit(1)
-    typer.secho(f'Task added: "{task}"', fg=typer.colors.GREEN)
-
+    typer.secho(message, fg=typer.colors.GREEN)
 
 @app.command()
 def remove(todo_id: int = typer.Argument(..., help="ID of the to-do to remove")):
     """Remove a to-do task by its ID."""
     db_path = get_db_path()
-    result = database.remove_todo(db_path, todo_id)
-    if result != 0:
-        typer.secho(f"Failed to remove task: {ERRORS.get(result, 'Unknown error')}", fg=typer.colors.RED)
+    code, message = remove_task(db_path, todo_id)
+    if code != 0:
+        typer.secho(f"Failed to remove task: {ERRORS.get(code, 'Unknown error')}", fg=typer.colors.RED)
         raise typer.Exit(1)
-    typer.secho(f"Task with ID {todo_id} removed.", fg=typer.colors.GREEN)
-
+    typer.secho(message, fg=typer.colors.GREEN)
 
 @app.command()
 def list():
